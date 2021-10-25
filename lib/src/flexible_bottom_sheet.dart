@@ -111,12 +111,24 @@ class FlexibleBottomSheet extends StatefulWidget {
         );
 
   @override
-  _FlexibleBottomSheetState createState() => _FlexibleBottomSheetState();
+  FlexibleBottomSheetState createState() => FlexibleBottomSheetState();
 }
 
-class _FlexibleBottomSheetState extends State<FlexibleBottomSheet>
+class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
     with SingleTickerProviderStateMixin {
   final _topOffsetTween = Tween<double>();
+
+  /// Scroll controller of a [FlexibleBottomSheet].
+  ///
+  /// This **has** to be hooked up to scrollable contents inside of
+  /// a [FlexibleBottomSheet] for the dragging to work properly.
+  ///
+  /// Access this property by using:
+  /// ```dart
+  /// context.findAncestorStateOfType<FlexibleBottomSheetState>().scrollController
+  /// ```
+  FlexibleDraggableScrollableSheetScrollController get scrollController =>
+      _controller;
 
   bool _isClosing = false;
 
@@ -189,21 +201,15 @@ class _FlexibleBottomSheetState extends State<FlexibleBottomSheet>
           _controller =
               controller as FlexibleDraggableScrollableSheetScrollController;
 
-          return AnimatedPadding(
-            duration: const Duration(milliseconds: 100),
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: _Content(
-              builder: widget.builder,
-              controller: _controller,
-              decoration: widget.decoration,
-              bodyBuilder: widget.bodyBuilder,
-              headerBuilder: widget.headerBuilder,
-              minHeaderHeight: widget.minHeaderHeight,
-              maxHeaderHeight: widget.maxHeaderHeight,
-              currentExtent: _currentExtent,
-            ),
+          return _Content(
+            builder: widget.builder,
+            controller: _controller,
+            decoration: widget.decoration,
+            bodyBuilder: widget.bodyBuilder,
+            headerBuilder: widget.headerBuilder,
+            minHeaderHeight: widget.minHeaderHeight,
+            maxHeaderHeight: widget.maxHeaderHeight,
+            currentExtent: _currentExtent,
           );
         },
         expand: widget.isExpand,
