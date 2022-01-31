@@ -127,14 +127,14 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
   /// ```dart
   /// context.findAncestorStateOfType<FlexibleBottomSheetState>().scrollController
   /// ```
-  FlexibleDraggableScrollableSheetScrollController get scrollController =>
+  FlexibleDraggableScrollableSheetScrollController? get scrollController =>
       _controller;
 
   bool _isClosing = false;
 
   late AnimationController _animationController;
   late double _currentAnchor;
-  late FlexibleDraggableScrollableSheetScrollController _controller;
+  FlexibleDraggableScrollableSheetScrollController? _controller;
   late Animation<double> _topTweenAnimation;
   late VoidCallback _animationListener;
   late void Function(AnimationStatus) _statusListener;
@@ -142,7 +142,7 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
   bool _isKeyboardOpenedNotified = false;
   bool _isKeyboardClosedNotified = false;
 
-  double get _currentExtent => _controller.extent.currentExtent;
+  double? get _currentExtent => _controller?.extent.currentExtent;
 
   List<double> get _screenAnchors => {
         if (widget.anchors != null) ...widget.anchors!,
@@ -168,13 +168,13 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
     _topTweenAnimation = _topOffsetTween.animate(curve);
     _statusListener = (status) {
       if (status == AnimationStatus.completed) {
-        _controller.extent.currentExtent = _currentAnchor;
+        _controller?.extent.currentExtent = _currentAnchor;
         _animationController.reset();
       }
     };
     _animationListener = () {
       if (_animationController.isAnimating) {
-        _controller.extent.currentExtent = _topTweenAnimation.value;
+        _controller?.extent.currentExtent = _topTweenAnimation.value;
       }
     };
     _topTweenAnimation
@@ -203,13 +203,13 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
 
           return _Content(
             builder: widget.builder,
-            controller: _controller,
+            controller: _controller!,
             decoration: widget.decoration,
             bodyBuilder: widget.bodyBuilder,
             headerBuilder: widget.headerBuilder,
             minHeaderHeight: widget.minHeaderHeight,
             maxHeaderHeight: widget.maxHeaderHeight,
-            currentExtent: _currentExtent,
+            currentExtent: _currentExtent ?? 0,
           );
         },
         expand: widget.isExpand,
@@ -260,7 +260,7 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
 
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
-    if (_controller.extent.currentExtent == widget.maxHeight &&
+    if (_controller?.extent.currentExtent == widget.maxHeight &&
         keyboardHeight != 0) {
       final widgetOffset = FocusManager.instance.primaryFocus!.offset.dy;
       final widgetHeight = FocusManager.instance.primaryFocus!.size.height;
@@ -270,8 +270,8 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
           keyboardHeight - (screenHeight - (widgetOffset + widgetHeight));
       if (valueToScroll > 0) {
         Future<void>.delayed(const Duration(milliseconds: 100)).then((_) {
-          _controller.animateTo(
-            _controller.offset + valueToScroll + 10,
+          _controller?.animateTo(
+            _controller!.offset + valueToScroll + 10,
             duration: const Duration(milliseconds: 200),
             curve: Curves.linear,
           );
@@ -319,7 +319,9 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
   }
 
   void _checkNeedCloseBottomSheet() {
-    if (_controller.extent.currentExtent <= widget.minHeight && !_isClosing) {
+    if (_controller != null &&
+        _controller!.extent.currentExtent <= widget.minHeight &&
+        !_isClosing) {
       _isClosing = true;
       _dismiss();
     }
@@ -334,12 +336,15 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
   }
 
   double _calculateNextAnchor(List<double> screenAnchor) {
-    if (screenAnchor.contains(_controller.extent.currentExtent)) {
-      return _controller.extent.currentExtent;
+    if (_controller == null) {
+      return 0;
+    }
+    if (screenAnchor.contains(_controller!.extent.currentExtent)) {
+      return _controller!.extent.currentExtent;
     }
 
     final nearestAnchor =
-        _findNearestAnchors(screenAnchor, _controller.extent.currentExtent);
+        _findNearestAnchors(screenAnchor, _controller!.extent.currentExtent);
     final firstAnchor = nearestAnchor[0];
     final secondAnchor = nearestAnchor[1];
 
@@ -348,8 +353,8 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
     } else if (secondAnchor == _currentAnchor) {
       return _findNextAnchorFromPrevious(secondAnchor, firstAnchor);
     } else {
-      return (firstAnchor - _controller.extent.currentExtent).abs() >
-              (secondAnchor - _controller.extent.currentExtent).abs()
+      return (firstAnchor - _controller!.extent.currentExtent).abs() >
+              (secondAnchor - _controller!.extent.currentExtent).abs()
           ? secondAnchor
           : firstAnchor;
     }
@@ -365,19 +370,23 @@ class FlexibleBottomSheetState extends State<FlexibleBottomSheet>
   }
 
   double _findNextAnchorFromPrevious(double previousAnchor, double nextAnchor) {
+    if (_controller == null) return 0;
     const percent = 0.2;
 
-    return (_controller.extent.currentExtent - previousAnchor).abs() >
+    return (_controller!.extent.currentExtent - previousAnchor).abs() >
             (nextAnchor - previousAnchor).abs() * percent
         ? nextAnchor
         : previousAnchor;
   }
 
   Future<void> _animateToNextAnchor(double nextAnchor) async {
-    if (_controller.extent.currentExtent == nextAnchor) return;
+    if (_controller == null ||
+        _controller?.extent.currentExtent == nextAnchor) {
+      return;
+    }
 
     _topOffsetTween
-      ..begin = _controller.extent.currentExtent
+      ..begin = _controller!.extent.currentExtent
       ..end = nextAnchor;
 
     await _animationController.forward();
